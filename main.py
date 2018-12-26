@@ -10,17 +10,26 @@ youtubeEndpoint = "https://www.googleapis.com/youtube/v3/"
 
 playlistsEndPoint = youtubeEndpoint + "playlists?key={}&part=snippet&maxResults=50&channelId={}&pageToken={}"
 playlistItemsEndPoint = youtubeEndpoint + "playlistItems?key={}&part=status,snippet,contentDetails&maxResults=50&playlistId={}&pageToken={}"
-channelEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&forUsername={}"
+channelUsernameEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&forUsername={}"
+channelIdEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&id={}"
 
 def fetch_JSON(url):
     reply = requests.get(url)
     content = json.loads(reply.content)
     return content
 
-def fetch_channel_data(username):
-    url = channelEndPoint.format(config['apikey'], username)
+def fetch_channel_data(usernameOrId):
+    url = channelUsernameEndPoint.format(config['apikey'], usernameOrId)
     channel = fetch_JSON(url)
-    return channel['items']
+    if len(channel['items']) > 0:
+        return channel['items'][0]
+    else:
+        url = channelIdEndPoint.format(config['apikey'], usernameOrId)
+        channel = fetch_JSON(url)
+        if len(channel['items']) > 0:
+            return channel['items'][0]
+        else:
+            return None
 
 def fetch_playlists(channelId):
     playlistItems = []
@@ -59,10 +68,11 @@ def channel_infos(channel):
     print("Title : " + channel['snippet']['title'])
     print("Description : " + channel['snippet']['description'])
     print("Url : https://www.youtube.com/channel/" + channel['id'])
-    if channel['snippet']['customUrl']:
+    if "customUrl" in channel['snippet']:
         print("Custom Url : https://www.youtube.com/" + channel['snippet']['customUrl'])
     print("Creation : " + channel['snippet']['publishedAt'])
-    print("Country : " + channel['snippet']['country'])
+    if "county" in channel['snippet']:
+        print("Country : " + channel['snippet']['country'])
     print("-------------------------------")
 
 def video_infos(video):
@@ -77,22 +87,27 @@ def main():
     channel = None
 
     while channel == None:
-        username = input("Username : ")
-        data = fetch_channel_data(username)
-        if len(data) <= 0:
+        username = input("Username/Channel ID : ")
+        channel_data = fetch_channel_data(username)
+        if None:
             print("Invalid channel")
             continue
 
-        channel_infos(data[0])
+        channel_infos(channel_data)
         response = "-"
         while response != "n":
             response = input("Correct user ? [Y/n] : ").lower()
             if response == "y" or response == "":
-                channel = data[0]
+                channel = channel_data
                 break
 
-    print("Looking for playlists")
+    print("Looking for playlists...")
     playlists = fetch_playlists(channel['id'])
+
+    if len(playlists) <= 0:
+        print("No playlists found !")
+        exit()
+
     videos = []
     for playlist in playlists:
         print("- " + playlist_infos(playlist))
