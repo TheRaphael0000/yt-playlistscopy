@@ -1,67 +1,111 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 import os
 import requests
 import json
 
-def loadConfig():
-    return json.loads(open("config.ini", "r").read())
+config = json.loads(open("config.ini", "r").read())
 
-def getEndpoint(config, location):
-    return "https://www.googleapis.com/youtube/v3/" + location + "?key=" + config['apikey']
+youtubeEndpoint = "https://www.googleapis.com/youtube/v3/"
 
-def requestGetUserPlaylistsIds(config, channelId):
-    ids = []
-    hasNextPage = True
+playlistsEndPoint = youtubeEndpoint + "playlists?key={}&part=snippet&maxResults=50&channelId={}&pageToken={}"
+playlistItemsEndPoint = youtubeEndpoint + "playlistItems?key={}&part=status,snippet,contentDetails&maxResults=50&playlistId={}&pageToken={}"
+channelEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&forUsername={}"
+
+def fetch_JSON(url):
+    reply = requests.get(url)
+    content = json.loads(reply.content)
+    return content
+
+def fetch_channel_data(username):
+    url = channelEndPoint.format(config['apikey'], username)
+    channel = fetch_JSON(url)
+    return channel['items']
+
+def fetch_playlists(channelId):
+    playlistItems = []
     nextPageToken = ""
-    i = 0
-    while hasNextPage:
-        i = i + 1
-        reply = requests.get(getEndpoint(config, "playlists") + "&part=id&maxResults=50&channelId=" + channelId + "&pageToken=" + nextPageToken)
-        content = json.loads(reply.content)
+    while nextPageToken != None:
+        url = playlistsEndPoint.format(config['apikey'], channelId, nextPageToken)
+        playlists = fetch_JSON(url)
         try:
-            if 'nextPageToken' in content:
-                hasNextPage = True
-                nextPageToken = content['nextPageToken']
+            if 'nextPageToken' in playlists:
+                nextPageToken = playlists['nextPageToken']
             else:
-                hasNextPage = False
-            items = content['items']
-            ids = ids + list(map(lambda x: x['id'], items))
+                nextPageToken = None
+            playlistItems = playlistItems + playlists['items']
         except:
-            print(content)
-        print("playlist page" + str(i) + " ok")
-    return ids
+            print(playlists)
+    return playlistItems
 
-def requestGetVideoFromPlaylist(config, playlistId):
-    reply = requests.get(getEndpoint(config, "playlistItems") + "&part=contentDetails&maxResults=50&playlistId=" + playlistId)
-    content = json.loads(reply.content)
-    try:
-        items = content['items']
-        videoIds = list(map(lambda x: x['contentDetails']['videoId'], items))
-    except:
-        print(content)
-    return videoIds
+def fetch_playlist_content(playlistId):
+    videosItems = []
+    nextPageToken = ""
+    while nextPageToken != None:
+        url = playlistItemsEndPoint.format(config['apikey'], playlistId, nextPageToken)
+        videos = fetch_JSON(url)
+        try:
+            if 'nextPageToken' in videos:
+                nextPageToken = videos['nextPageToken']
+            else:
+                nextPageToken = None
+            videosItems = videosItems + videos['items']
+        except:
+            print(videos)
+    return videosItems
 
-def requestIsVideoUnlisted(config, id):
-    reply = requests.get(getEndpoint(config, "videos") + "&part=status&maxResults=1&id=" + id)
-    content = json.loads(reply.content)
-    privacyStatus = ""
-    try:
-        items = content['items']
-        privacyStatus = items[0]['status']['privacyStatus']
-    except:
-        print(content)
-    return "unlisted" == privacyStatus
+def channel_infos(channel):
+    print("-------------------------------")
+    print("Title : " + channel['snippet']['title'])
+    print("Description : " + channel['snippet']['description'])
+    print("Url : https://www.youtube.com/channel/" + channel['id'])
+    if channel['snippet']['customUrl']:
+        print("Custom Url : https://www.youtube.com/" + channel['snippet']['customUrl'])
+    print("Creation : " + channel['snippet']['publishedAt'])
+    print("Country : " + channel['snippet']['country'])
+    print("-------------------------------")
+
+def video_infos(video):
+    return "[" + video['status']['privacyStatus'] + "] : " + video['snippet']['title'] + " (https://youtu.be/"+ video['contentDetails']['videoId'] +")"
+
+def playlist_infos(playlist):
+    return playlist['snippet']['title'] + " (https://www.youtube.com/playlist?list="+ playlist['id'] + ")"
 
 def main():
-    config = loadConfig()
-    playlistsIds = requestGetUserPlaylistsIds(config, config['tests']['channel'])
-    print(playlistsIds)
-    videosListPerPlaylists = list(map(lambda x: requestGetVideoFromPlaylist(config, x), playlistsIds))
-    print(videosListPerPlaylists)
-    videosList = [item for sublist in videosListPerPlaylists for item in sublist] # merging every video into a single array
-    uniqueVideos = list(set(videosList)) # removing doubles videos
-    unlistedVideo = list(filter(lambda x: requestIsVideoUnlisted(config, x), uniqueVideos))
-    print(unlistedVideo)
+    notPublicVideos = []
+
+    channel = None
+
+    while channel == None:
+        username = input("Username : ")
+        data = fetch_channel_data(username)
+        if len(data) <= 0:
+            print("Invalid channel")
+            continue
+
+        channel_infos(data[0])
+        response = "-"
+        while response != "n":
+            response = input("Correct user ? [Y/n] : ").lower()
+            if response == "y" or response == "":
+                channel = data[0]
+                break
+
+    print("Looking for playlists")
+    playlists = fetch_playlists(channel['id'])
+    videos = []
+    for playlist in playlists:
+        print("- " + playlist_infos(playlist))
+        videoInPlaylist = fetch_playlist_content(playlist['id'])
+        videos = videos + videoInPlaylist
+        for video in videoInPlaylist:
+            if video['status']['privacyStatus'] != 'public':
+                print("-- " + video_infos(video))
+                notPublicVideos.append((playlist, video))
+
+    print("Summary")
+    for playlist, video in notPublicVideos:
+        print(video_infos(video) + " in " + playlist_infos(playlist))
 
 if __name__ == '__main__':
     main()
