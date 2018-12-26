@@ -1,2 +1,0 @@
-- In the playlistItem query i must use the differente parts instead of a query for each video of the playlist (faster less queries)
-- In the playlistItem I must implement the nextPage load
