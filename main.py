@@ -10,8 +10,7 @@ youtubeEndpoint = "https://www.googleapis.com/youtube/v3/"
 
 playlistsEndPoint = youtubeEndpoint + "playlists?key={}&part=snippet&maxResults=50&channelId={}&pageToken={}"
 playlistItemsEndPoint = youtubeEndpoint + "playlistItems?key={}&part=status,snippet,contentDetails&maxResults=50&playlistId={}&pageToken={}"
-channelUsernameEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&forUsername={}"
-channelIdEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet&id={}"
+channelEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet,statistics"
 
 def fetch_JSON(url):
     reply = requests.get(url)
@@ -19,12 +18,12 @@ def fetch_JSON(url):
     return content
 
 def fetch_channel_data(usernameOrId):
-    url = channelUsernameEndPoint.format(config['apikey'], usernameOrId)
+    url = channelEndPoint.format(config['apikey']) + "&forUsername=" + usernameOrId
     channel = fetch_JSON(url)
     if len(channel['items']) > 0:
         return channel['items'][0]
     else:
-        url = channelIdEndPoint.format(config['apikey'], usernameOrId)
+        url = channelEndPoint.format(config['apikey']) + "&id=" + usernameOrId
         channel = fetch_JSON(url)
         if len(channel['items']) > 0:
             return channel['items'][0]
@@ -73,6 +72,9 @@ def channel_infos(channel):
     print("Creation : " + channel['snippet']['publishedAt'])
     if "county" in channel['snippet']:
         print("Country : " + channel['snippet']['country'])
+    print("Number of subscribers : " + channel['statistics']['subscriberCount'])
+    print("Number of views : " + channel['statistics']['viewCount'])
+    print("Number of videos : " + channel['statistics']['videoCount'])
     print("-------------------------------")
 
 def video_infos(video):
