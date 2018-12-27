@@ -14,7 +14,14 @@ channelEndPoint = youtubeEndpoint + "channels?key={}&part=id,snippet,statistics"
 
 def fetch_JSON(url):
     reply = requests.get(url)
+    code = str(reply.status_code)
     content = json.loads(reply.content)
+    if code[0] == "4":
+        print("Error ", str(content["error"]["code"]))
+        for er in content["error"]["errors"]:
+            print("Reason : ", er["reason"])
+            print("Message : ", er["message"])
+        exit()
     return content
 
 def fetch_channel_data(usernameOrId):
