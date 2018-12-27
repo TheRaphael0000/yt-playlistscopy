@@ -116,9 +116,12 @@ def main():
         videoInPlaylist = fetch_playlist_content(playlist['id'])
         videos = videos + videoInPlaylist
         for video in videoInPlaylist:
-            if video['status']['privacyStatus'] != 'public':
-                print("-- " + video_infos(video))
-                notPublicVideos.append((playlist, video))
+            if 'status' in video:
+                if video['status']['privacyStatus'] != 'public':
+                    print("-- " + video_infos(video))
+                    notPublicVideos.append((playlist, video))
+            else:
+                print("-- [deleted video]")
 
     print("Summary")
     for playlist, video in notPublicVideos:
