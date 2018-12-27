@@ -16,11 +16,11 @@ def fetch_JSON(url):
     reply = requests.get(url)
     code = str(reply.status_code)
     content = json.loads(reply.content)
-    if code[0] == "4":
-        print("Error ", str(content["error"]["code"]))
+    if code[0] == "4" or code[0] == "5":
+        print("Error", str(content["error"]["code"]))
         for er in content["error"]["errors"]:
-            print("Reason : ", er["reason"])
-            print("Message : ", er["message"])
+            print("Reason :", er["reason"])
+            print("Message :", er["message"])
         exit()
     return content
 
@@ -90,7 +90,7 @@ def video_infos(video):
 def playlist_infos(playlist):
     return playlist['snippet']['title'] + " (https://www.youtube.com/playlist?list="+ playlist['id'] + ")"
 
-def main():
+def analyse():
     notPublicVideos = []
 
     channel = None
@@ -98,7 +98,7 @@ def main():
     while channel == None:
         username = input("Username/Channel ID : ")
         channel_data = fetch_channel_data(username)
-        if None:
+        if channel_data == None:
             print("Invalid channel")
             continue
 
@@ -131,8 +131,11 @@ def main():
                 print("-- [deleted video]")
 
     print("Summary")
+    if len(notPublicVideos) <= 0:
+        print("No videos found !")
     for playlist, video in notPublicVideos:
         print(video_infos(video) + " in " + playlist_infos(playlist))
 
 if __name__ == '__main__':
-    main()
+    while True:
+        analyse()
