@@ -146,6 +146,8 @@ def analyse():
             else:
                 print("-- [deleted video]")
 
+    notPublicVideos.sort(key=lambda v: v[1]['status']['privacyStatus'])
+
     print("Summary")
     if len(notPublicVideos) <= 0:
         print("No videos found !")
