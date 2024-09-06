@@ -31,7 +31,7 @@ def fetch_JSON(url):
 
 def fetch_channel_data(usernameOrId):
     url = channelEndPoint.format(
-        config['apikey']) + "&forUsername=" + usernameOrId
+        config['apikey']) + "&forHandle=" + usernameOrId
     channel = fetch_JSON(url)
     if len(channel['items']) > 0:
         return channel['items'][0]
