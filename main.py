@@ -29,19 +29,22 @@ def fetch_JSON(url):
     return content
 
 
-def fetch_channel_data(usernameOrId):
-    url = channelEndPoint.format(
-        config['apikey']) + "&forHandle=" + usernameOrId
+def fetch_channel_data(usernameOrId):    
+    url = channelEndPoint.format(config['apikey']) + "&id=" + usernameOrId
     channel = fetch_JSON(url)
-    if len(channel['items']) > 0:
+    if 'items' in channel and len(channel['items']) > 0:
         return channel['items'][0]
-    else:
-        url = channelEndPoint.format(config['apikey']) + "&id=" + usernameOrId
-        channel = fetch_JSON(url)
-        if len(channel['items']) > 0:
-            return channel['items'][0]
-        else:
-            return None
+    
+    url = channelEndPoint.format(config['apikey']) + "&forHandle=" + usernameOrId
+    channel = fetch_JSON(url)
+    if 'items' in channel and len(channel['items']) > 0:
+        return channel['items'][0]
+    
+    url = channelEndPoint.format(config['apikey']) + f"&forUsername=" + usernameOrId
+    channel = fetch_JSON(url)
+    if 'items' in channel and len(channel['items']) > 0:
+        return channel['items'][0]
+    return None
 
 
 def fetch_playlists(channelId):
